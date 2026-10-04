@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdlib>
 #include <thread>
 #include <vector>
 
@@ -214,6 +215,11 @@ int main(int argc, char** argv)
     auto res = computeNorthEast(final_transform, true, true);
 
     std::cout << " North: " << res.north << " East: " << res.east << "\n";
+
+    if (std::getenv("PERCEPTION_HEADLESS") != nullptr)
+    {
+        return 0;
+    }
 
     // Static visualization loop (no animation)
     while (!viewer_1.wasStopped())

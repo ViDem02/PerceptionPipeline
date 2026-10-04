@@ -31,6 +31,13 @@ cmake --build .
 ./odometry_icp first.pcd second.pcd
 ```
 
+For a repeatable headless benchmark using the same preprocessing and ICP path
+without opening the visualization window:
+
+```sh
+PERCEPTION_HEADLESS=1 ./sample_consensus first.pcd second.pcd
+```
+
 ## Output
 
 - Console: ICP score, transformation matrix, north/east displacement of vehicle
