@@ -1,0 +1,392 @@
+% ======================================================================
+%  References for the LiDAR perception study guide
+% ======================================================================
+
+% ---------------- Registration / ICP ----------------
+@article{besl1992icp,
+  author  = {Besl, Paul J. and McKay, Neil D.},
+  title   = {A Method for Registration of 3-{D} Shapes},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume  = {14},
+  number  = {2},
+  pages   = {239--256},
+  year    = {1992}
+}
+
+@article{chen1992object,
+  author  = {Chen, Yang and Medioni, G{\'e}rard},
+  title   = {Object Modelling by Registration of Multiple Range Images},
+  journal = {Image and Vision Computing},
+  volume  = {10},
+  number  = {3},
+  pages   = {145--155},
+  year    = {1992}
+}
+
+@inproceedings{rusinkiewicz2001efficient,
+  author    = {Rusinkiewicz, Szymon and Levoy, Marc},
+  title     = {Efficient Variants of the {ICP} Algorithm},
+  booktitle = {Proc.\ 3rd International Conference on 3-D Digital Imaging and Modeling (3DIM)},
+  pages     = {145--152},
+  year      = {2001}
+}
+
+@article{arun1987least,
+  author  = {Arun, K. S. and Huang, T. S. and Blostein, S. D.},
+  title   = {Least-Squares Fitting of Two 3-{D} Point Sets},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume  = {9},
+  number  = {5},
+  pages   = {698--700},
+  year    = {1987}
+}
+
+@article{umeyama1991least,
+  author  = {Umeyama, Shinji},
+  title   = {Least-Squares Estimation of Transformation Parameters Between Two Point Patterns},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume  = {13},
+  number  = {4},
+  pages   = {376--380},
+  year    = {1991}
+}
+
+@article{horn1987closed,
+  author  = {Horn, Berthold K. P.},
+  title   = {Closed-Form Solution of Absolute Orientation Using Unit Quaternions},
+  journal = {Journal of the Optical Society of America A},
+  volume  = {4},
+  number  = {4},
+  pages   = {629--642},
+  year    = {1987}
+}
+
+@inproceedings{segal2009gicp,
+  author    = {Segal, Aleksandr and H{\"a}hnel, Dirk and Thrun, Sebastian},
+  title     = {Generalized-{ICP}},
+  booktitle = {Robotics: Science and Systems (RSS)},
+  year      = {2009}
+}
+
+@inproceedings{biber2003ndt,
+  author    = {Biber, Peter and Stra{\ss}er, Wolfgang},
+  title     = {The Normal Distributions Transform: A New Approach to Laser Scan Matching},
+  booktitle = {Proc.\ IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  pages     = {2743--2748},
+  year      = {2003}
+}
+
+@article{pomerleau2015review,
+  author  = {Pomerleau, Fran{\c{c}}ois and Colas, Francis and Siegwart, Roland},
+  title   = {A Review of Point Cloud Registration Algorithms for Mobile Robotics},
+  journal = {Foundations and Trends in Robotics},
+  volume  = {4},
+  number  = {1},
+  pages   = {1--104},
+  year    = {2015}
+}
+
+@inproceedings{zhang2014loam,
+  author    = {Zhang, Ji and Singh, Sanjiv},
+  title     = {{LOAM}: Lidar Odometry and Mapping in Real-time},
+  booktitle = {Robotics: Science and Systems (RSS)},
+  year      = {2014}
+}
+
+@article{vizzo2023kiss,
+  author  = {Vizzo, Ignacio and Guadagnino, Tiziano and Mersch, Benedikt and Wiesmann, Louis and Behley, Jens and Stachniss, Cyrill},
+  title   = {{KISS-ICP}: In Defense of Point-to-Point {ICP} -- Simple, Accurate, and Robust Registration If Done the Right Way},
+  journal = {IEEE Robotics and Automation Letters},
+  volume  = {8},
+  number  = {2},
+  pages   = {1029--1036},
+  year    = {2023}
+}
+
+@inproceedings{zhang2016degeneracy,
+  author    = {Zhang, Ji and Kaess, Michael and Singh, Sanjiv},
+  title     = {On Degeneracy of Optimization-based State Estimation Problems},
+  booktitle = {Proc.\ IEEE International Conference on Robotics and Automation (ICRA)},
+  pages     = {809--816},
+  year      = {2016}
+}
+
+% ---------------- Point-cloud processing ----------------
+@inproceedings{rusu2011pcl,
+  author    = {Rusu, Radu Bogdan and Cousins, Steve},
+  title     = {3{D} is here: {P}oint {C}loud {L}ibrary ({PCL})},
+  booktitle = {Proc.\ IEEE International Conference on Robotics and Automation (ICRA)},
+  year      = {2011}
+}
+
+@article{rusu2008towards,
+  author  = {Rusu, Radu Bogdan and Marton, Zoltan Csaba and Blodow, Nico and Dolha, Mihai and Beetz, Michael},
+  title   = {Towards 3{D} Point Cloud Based Object Maps for Household Environments},
+  journal = {Robotics and Autonomous Systems},
+  volume  = {56},
+  number  = {11},
+  pages   = {927--941},
+  year    = {2008}
+}
+
+@phdthesis{rusu2009thesis,
+  author = {Rusu, Radu Bogdan},
+  title  = {Semantic 3{D} Object Maps for Everyday Manipulation in Human Living Environments},
+  school = {Technische Universit{\"a}t M{\"u}nchen},
+  year   = {2009}
+}
+
+@inproceedings{rabbani2006segmentation,
+  author    = {Rabbani, Tahir and van den Heuvel, Frank A. and Vosselman, George},
+  title     = {Segmentation of Point Clouds Using Smoothness Constraint},
+  booktitle = {ISPRS Commission V Symposium, International Archives of Photogrammetry, Remote Sensing and Spatial Information Sciences},
+  volume    = {36},
+  number    = {5},
+  pages     = {248--253},
+  year      = {2006}
+}
+
+@inproceedings{hoppe1992surface,
+  author    = {Hoppe, Hugues and DeRose, Tony and Duchamp, Tom and McDonald, John and Stuetzle, Werner},
+  title     = {Surface Reconstruction from Unorganized Points},
+  booktitle = {Proc.\ SIGGRAPH},
+  pages     = {71--78},
+  year      = {1992}
+}
+
+@inproceedings{pauly2002efficient,
+  author    = {Pauly, Mark and Gross, Markus and Kobbelt, Leif P.},
+  title     = {Efficient Simplification of Point-Sampled Surfaces},
+  booktitle = {Proc.\ IEEE Visualization},
+  pages     = {163--170},
+  year      = {2002}
+}
+
+@inproceedings{ester1996dbscan,
+  author    = {Ester, Martin and Kriegel, Hans-Peter and Sander, J{\"o}rg and Xu, Xiaowei},
+  title     = {A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise},
+  booktitle = {Proc.\ 2nd International Conference on Knowledge Discovery and Data Mining (KDD)},
+  pages     = {226--231},
+  year      = {1996}
+}
+
+@article{fischler1981ransac,
+  author  = {Fischler, Martin A. and Bolles, Robert C.},
+  title   = {Random Sample Consensus: A Paradigm for Model Fitting with Applications to Image Analysis and Automated Cartography},
+  journal = {Communications of the ACM},
+  volume  = {24},
+  number  = {6},
+  pages   = {381--395},
+  year    = {1981}
+}
+
+@article{bentley1975kdtree,
+  author  = {Bentley, Jon Louis},
+  title   = {Multidimensional Binary Search Trees Used for Associative Searching},
+  journal = {Communications of the ACM},
+  volume  = {18},
+  number  = {9},
+  pages   = {509--517},
+  year    = {1975}
+}
+
+@article{muja2014flann,
+  author  = {Muja, Marius and Lowe, David G.},
+  title   = {Scalable Nearest Neighbor Algorithms for High Dimensional Data},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume  = {36},
+  number  = {11},
+  pages   = {2227--2240},
+  year    = {2014}
+}
+
+% ---------------- Learning-based 3D perception ----------------
+@inproceedings{qi2017pointnet,
+  author    = {Qi, Charles R. and Su, Hao and Mo, Kaichun and Guibas, Leonidas J.},
+  title     = {{PointNet}: Deep Learning on Point Sets for 3{D} Classification and Segmentation},
+  booktitle = {Proc.\ IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {652--660},
+  year      = {2017}
+}
+
+@inproceedings{zhou2018voxelnet,
+  author    = {Zhou, Yin and Tuzel, Oncel},
+  title     = {{VoxelNet}: End-to-End Learning for Point Cloud Based 3{D} Object Detection},
+  booktitle = {Proc.\ IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {4490--4499},
+  year      = {2018}
+}
+
+@inproceedings{lang2019pointpillars,
+  author    = {Lang, Alex H. and Vora, Sourabh and Caesar, Holger and Zhou, Lubing and Yang, Jiong and Beijbom, Oscar},
+  title     = {{PointPillars}: Fast Encoders for Object Detection from Point Clouds},
+  booktitle = {Proc.\ IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+  pages     = {12697--12705},
+  year      = {2019}
+}
+
+% ---------------- Formula Student / racing ----------------
+@article{kabzan2020amz,
+  author  = {Kabzan, Juraj and others},
+  title   = {{AMZ} Driverless: The Full Autonomous Racing System},
+  journal = {Journal of Field Robotics},
+  volume  = {37},
+  number  = {7},
+  pages   = {1267--1294},
+  year    = {2020}
+}
+
+@inproceedings{gosala2019redundant,
+  author    = {Gosala, Nikhil and others},
+  title     = {Redundant Perception and State Estimation for Reliable Autonomous Racing},
+  booktitle = {Proc.\ IEEE International Conference on Robotics and Automation (ICRA)},
+  pages     = {6561--6567},
+  year      = {2019}
+}
+
+@inproceedings{dhall2019real,
+  author    = {Dhall, Ankit and Dai, Dengxin and Van Gool, Luc},
+  title     = {Real-time 3{D} Traffic Cone Detection for Autonomous Driving},
+  booktitle = {Proc.\ IEEE Intelligent Vehicles Symposium (IV)},
+  pages     = {494--501},
+  year      = {2019}
+}
+
+@article{heilmeier2020minimum,
+  author  = {Heilmeier, Alexander and Wischnewski, Alexander and Hermansdorfer, Leonhard and Betz, Johannes and Lienkamp, Markus and Lohmann, Boris},
+  title   = {Minimum Curvature Trajectory Planning and Control for an Autonomous Race Car},
+  journal = {Vehicle System Dynamics},
+  volume  = {58},
+  number  = {10},
+  pages   = {1497--1527},
+  year    = {2020}
+}
+
+% ---------------- Optimisation ----------------
+@techreport{powell2009bobyqa,
+  author      = {Powell, M. J. D.},
+  title       = {The {BOBYQA} Algorithm for Bound Constrained Optimization without Derivatives},
+  institution = {Department of Applied Mathematics and Theoretical Physics, University of Cambridge},
+  number      = {NA2009/06},
+  year        = {2009}
+}
+
+@misc{johnson_nlopt,
+  author       = {Johnson, Steven G.},
+  title        = {The {NLopt} Nonlinear-Optimization Package},
+  howpublished = {\url{https://github.com/stevengj/nlopt}},
+  year         = {2007}
+}
+
+@article{wachter2006ipopt,
+  author  = {W{\"a}chter, Andreas and Biegler, Lorenz T.},
+  title   = {On the Implementation of an Interior-Point Filter Line-Search Algorithm for Large-Scale Nonlinear Programming},
+  journal = {Mathematical Programming},
+  volume  = {106},
+  number  = {1},
+  pages   = {25--57},
+  year    = {2006}
+}
+
+@article{andersson2019casadi,
+  author  = {Andersson, Joel A. E. and Gillis, Joris and Horn, Greg and Rawlings, James B. and Diehl, Moritz},
+  title   = {{CasADi}: A Software Framework for Nonlinear Optimization and Optimal Control},
+  journal = {Mathematical Programming Computation},
+  volume  = {11},
+  number  = {1},
+  pages   = {1--36},
+  year    = {2019}
+}
+
+@book{nocedal2006numerical,
+  author    = {Nocedal, Jorge and Wright, Stephen J.},
+  title     = {Numerical Optimization},
+  edition   = {2nd},
+  publisher = {Springer},
+  year      = {2006}
+}
+
+@book{conn2009introduction,
+  author    = {Conn, Andrew R. and Scheinberg, Katya and Vicente, Luis N.},
+  title     = {Introduction to Derivative-Free Optimization},
+  publisher = {SIAM},
+  year      = {2009}
+}
+
+% ---------------- Textbooks: vision, robotics, C++ ----------------
+@book{hartley2004multiple,
+  author    = {Hartley, Richard and Zisserman, Andrew},
+  title     = {Multiple View Geometry in Computer Vision},
+  edition   = {2nd},
+  publisher = {Cambridge University Press},
+  year      = {2004}
+}
+
+@book{szeliski2022computer,
+  author    = {Szeliski, Richard},
+  title     = {Computer Vision: Algorithms and Applications},
+  edition   = {2nd},
+  publisher = {Springer},
+  year      = {2022}
+}
+
+@inproceedings{rublee2011orb,
+  author    = {Rublee, Ethan and Rabaud, Vincent and Konolige, Kurt and Bradski, Gary},
+  title     = {{ORB}: An Efficient Alternative to {SIFT} or {SURF}},
+  booktitle = {Proc.\ IEEE International Conference on Computer Vision (ICCV)},
+  pages     = {2564--2571},
+  year      = {2011}
+}
+
+@article{nister2004efficient,
+  author  = {Nist{\'e}r, David},
+  title   = {An Efficient Solution to the Five-Point Relative Pose Problem},
+  journal = {IEEE Transactions on Pattern Analysis and Machine Intelligence},
+  volume  = {26},
+  number  = {6},
+  pages   = {756--770},
+  year    = {2004}
+}
+
+@book{barfoot2017state,
+  author    = {Barfoot, Timothy D.},
+  title     = {State Estimation for Robotics},
+  publisher = {Cambridge University Press},
+  year      = {2017}
+}
+
+@book{thrun2005probabilistic,
+  author    = {Thrun, Sebastian and Burgard, Wolfram and Fox, Dieter},
+  title     = {Probabilistic Robotics},
+  publisher = {MIT Press},
+  year      = {2005}
+}
+
+@book{siciliano2009robotics,
+  author    = {Siciliano, Bruno and Sciavicco, Lorenzo and Villani, Luigi and Oriolo, Giuseppe},
+  title     = {Robotics: Modelling, Planning and Control},
+  publisher = {Springer},
+  year      = {2009}
+}
+
+@book{stroustrup2013cpp,
+  author    = {Stroustrup, Bjarne},
+  title     = {The {C}++ Programming Language},
+  edition   = {4th},
+  publisher = {Addison-Wesley},
+  year      = {2013}
+}
+
+@book{meyers2014effective,
+  author    = {Meyers, Scott},
+  title     = {Effective Modern {C}++},
+  publisher = {O'Reilly Media},
+  year      = {2014}
+}
+
+@misc{eigenweb,
+  author       = {Guennebaud, Ga{\"e}l and Jacob, Beno{\^i}t and others},
+  title        = {Eigen v3},
+  howpublished = {\url{https://eigen.tuxfamily.org}},
+  year         = {2010}
+}
