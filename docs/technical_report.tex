@@ -1,0 +1,562 @@
+  % ======================================================================
+  %  LiDAR perception pipeline --- technical report
+  %  Built from the personal template (template/doc.tex).
+  %  Compile: pdflatex -> bibtex -> pdflatex x2   (or: latexmk -pdf technical_report.tex)
+  % ======================================================================
+
+  \documentclass[10pt,a4paper]{scrartcl}
+
+  % --------------------------------------------------
+  % Encoding and language
+  % --------------------------------------------------
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage[english]{babel}
+
+  % --------------------------------------------------
+  % Page layout
+  % --------------------------------------------------
+  \usepackage[
+    top=18mm,
+    bottom=18mm,
+    left=20mm,
+    right=20mm,
+    includefoot
+  ]{geometry}
+
+  % --------------------------------------------------
+  % Mathematics and graphics
+  % --------------------------------------------------
+  \usepackage{graphicx}
+  \usepackage{amsmath,amssymb}
+  \usepackage{bm}
+  \setlength{\jot}{0.3cm}
+
+  % --------------------------------------------------
+  % Tables
+  % --------------------------------------------------
+  \usepackage{booktabs}
+  \usepackage{tabularx}
+  \usepackage{array}
+  \usepackage{ragged2e}
+  \usepackage{float}
+  \newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+  % --------------------------------------------------
+  % Typography
+  % --------------------------------------------------
+  \usepackage[scaled=0.95]{helvet}
+  \usepackage[expansion=false]{microtype}
+  \renewcommand{\familydefault}{\sfdefault}
+
+  % --------------------------------------------------
+  % Lists
+  % --------------------------------------------------
+  \usepackage{enumitem}
+  \setlist[itemize]{leftmargin=*, topsep=2pt, parsep=0pt, partopsep=0pt, itemsep=3pt}
+  \setlist[enumerate]{leftmargin=*, topsep=2pt, parsep=0pt, partopsep=0pt, itemsep=3pt}
+  \setlist[description]{leftmargin=0pt, topsep=2pt, parsep=0pt, itemsep=3pt}
+
+  % --------------------------------------------------
+  % Colour, figures, boxes and hyperlinks
+  % --------------------------------------------------
+  \usepackage[dvipsnames]{xcolor}
+  \usepackage{tikz}
+  \usetikzlibrary{arrows.meta,positioning,calc}
+  \usepackage{pgfplots}
+  \pgfplotsset{compat=1.18}
+  \usepackage{tcolorbox}
+  \tcbuselibrary{skins,breakable}
+  \usepackage{caption}
+  \usepackage[hidelinks]{hyperref}
+
+  \definecolor{accent}{RGB}{0,129,88}
+  \definecolor{leftc}{RGB}{37,99,235}
+  \definecolor{rightc}{RGB}{202,138,4}
+  \renewcommand{\emph}[1]{\textcolor{accent}{#1}}
+  \captionsetup{font=small,labelfont={bf,color=accent}}
+
+  \newtcolorbox{keybox}[1][Key results]{enhanced, breakable,
+    colback=accent!5, colframe=accent, boxrule=0.6pt, arc=2pt,
+    left=6pt, right=6pt, top=3pt, bottom=3pt,
+    fonttitle=\bfseries\small, title={#1}}
+  \newtcolorbox{warnbox}[1][Limitation]{enhanced, breakable,
+    colback=BrickRed!4, colframe=BrickRed, boxrule=0.6pt, arc=2pt,
+    left=6pt, right=6pt, top=3pt, bottom=3pt,
+    fonttitle=\bfseries\small, title={#1}}
+
+  \newcommand{\code}[1]{\texttt{#1}}
+  \newcommand{\file}[1]{\texttt{\small #1}}
+
+  % --------------------------------------------------
+  % Citations
+  % --------------------------------------------------
+  \usepackage[numbers,square,sort&compress]{natbib}
+
+  % --------------------------------------------------
+  % Header and footer
+  % --------------------------------------------------
+  \usepackage[automark,headsepline=false,footsepline=false]{scrlayer-scrpage}
+  \clearpairofpagestyles
+  \ifoot{Victor Gabriele De Matteis}
+  \cfoot{\pagemark}
+  \ofoot{LiDAR Perception --- Technical Report}
+  \setlength{\footskip}{20mm}
+  \pagestyle{scrheadings}
+
+  % --------------------------------------------------
+  % Spacing and sections
+  % --------------------------------------------------
+  \setlength{\parindent}{0pt}
+  \setlength{\parskip}{0.45em}
+
+  \RedeclareSectionCommand[beforeskip=1.4ex plus 0.2ex minus 0.1ex, afterskip=0.6ex]{section}
+  \RedeclareSectionCommand[beforeskip=1.0ex plus 0.2ex minus 0.1ex, afterskip=0.4ex]{subsection}
+  \RedeclareSectionCommand[beforeskip=0.7ex plus 0.2ex minus 0.1ex, afterskip=0.3ex]{subsubsection}
+  \setkomafont{section}{\large\bfseries\color{accent}}
+  \setkomafont{subsection}{\normalsize\bfseries\color{accent}}
+  \setkomafont{subsubsection}{\normalsize\bfseries}
+
+  \newcommand{\RuleSection}[1]{%
+    \section{#1}%
+    \vspace{0.2em}{\color{accent!35}\hrule height 0.4pt}\vspace{0.3em}%
+  }
+
+  % ======================================================================
+  \begin{document}
+  % ======================================================================
+
+  \begin{center}
+    {\Huge\bfseries\color{accent} LiDAR Perception for Driverless Racing}\\[0.25cm]
+    {\large Technical report: cone detection, track boundaries, racing line and odometry}\\[0.2cm]
+    {\small E-Agle Formula Student Driverless perception task (LiDAR path) --- October 2026}\\[0.15cm]
+    {\small Victor Gabriele De Matteis}\\[0.2cm]
+    {\color{accent!35}\hrule height 0.5pt}
+  \end{center}
+
+  \vspace{0.3em}
+
+  \begin{abstract}
+  \noindent
+  This report describes a LiDAR-only perception pipeline for a Formula Student Driverless
+  car, written in C++20 with PCL, Eigen and NLopt, and what it achieves. From a single
+  24,000-point scan the pipeline finds the track cones, assigns them to the left or right
+  boundary, and computes a minimum-curvature racing line. A second program estimates the
+  car's motion between two scans with ICP. A Qt viewer shows every stage and lets an operator
+  tune the parameters live. Because the recorded data has no labels, the work is validated
+  against \emph{ground truth that is known by construction}: synthetic tracks, synthetic
+  motions applied to a real scan, and a ray-casting LiDAR simulator. Four automated tests run
+  under \code{ctest}, and two evaluation tools write visual reports for human review. The
+  validation found and fixed three defects that gave plausible-looking but wrong results. It
+  also measured where the system stands: track-boundary and racing-line logic are correct
+  on every clean test track, and odometry recovers known motions to 2\,mm. The weak point is
+  cone detection, with 37\,\% recall on simulated scans. The full pipeline needs 0.49\,s per
+  scan on one CPU core, against a 0.1\,s real-time budget.
+  \end{abstract}
+
+  % ======================================================================
+  \RuleSection{Summary}
+  \label{sec:summary}
+
+  \begin{keybox}[Key results (measured on an Apple M3, Release build)]
+  \small
+  \begin{tabularx}{\linewidth}{@{}L{6.2cm} X@{}}
+  Recorded scan (\code{cones.pcd}) & 24,000 points $\to$ 67 clusters $\to$ 6 cones: 2 left, 3 right, 1 left unassigned \\
+  Left/right split, synthetic tracks & 10/10 clean tracks correct (previous version: 2/10) \\
+  Racing line, known optima & centreline on a straight (error 0); outer edge on an arc (within 2.3\,\% of the half-width) \\
+  Odometry, known motions & error 2\,mm and $<0.01^\circ$ (previous settings: 0.77--0.96\,m, $\approx10^\circ$) \\
+  Cone detection, simulated scans & precision 79\,\%, recall 37\,\%, centroid error 6.9\,cm \\
+  Runtime, cone pipeline & $485\pm22$\,ms per scan (2.1\,Hz), one core \\
+  Runtime, odometry ICP & 2.20\,s per scan pair (median of 10) \\
+  Automated tests & 4 \code{ctest} targets, all passing; 2 report generators \\
+  \end{tabularx}
+  \end{keybox}
+
+  \textbf{What works.} The pipeline runs end to end on the recorded scan and produces a
+  usable result. The geometry downstream of detection (boundary assignment, racing line,
+  frame conventions, odometry transform) is verified against exact answers.
+
+  \textbf{What does not, yet.} Cone recall falls quickly with range, and the cone/non-cone
+  decision does not separate cones from cone-sized objects. Section~\ref{sec:detection}
+  quantifies both, together with a measured alternative. Throughput is about 5$\times$ below a
+  10\,Hz sensor rate.
+
+  \textbf{Maturity.} A research prototype. It is validated in simulation and on one recorded
+  scan, has regression tests for its geometric core, and has a clear, measured list of next
+  steps (Section~\ref{sec:roadmap}).
+
+  % ======================================================================
+  \RuleSection{Scope and data}
+  \label{sec:scope}
+
+  The task (\file{docs/task\_brief.md}) asks for five levels on either camera or LiDAR data:
+  load and preprocess, detect cones, classify cones versus obstacles, extract the track or
+  racing line, and estimate odometry, plus an interactive debugging GUI. The LiDAR path was
+  chosen. Levels 1--4 use \code{cones.pcd}; level 5 uses \code{first.pcd} and \code{second.pcd}.
+
+  Each scan holds 24,000 points. All $x$ values are non-negative, so the sensor is
+  forward-looking, and it sits about 0.82\,m above the ground. The data contains no labels,
+  no cone colours (intensity is not used) and no timestamps. After the loading transform,
+  every module uses one frame: \textbf{$x$ forward, $y$ up, $z$ right}; the track lies in the
+  $(x,z)$ plane. Every module was made to use this one convention; an earlier version mixed
+  two conventions (Section~\ref{sec:fixes}).
+
+  % ======================================================================
+  \RuleSection{System architecture}
+  \label{sec:arch}
+
+  \begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}[
+      node distance=3.2mm,
+      box/.style={draw=accent, fill=accent!6, rounded corners=2pt, align=left,
+                  text width=7.3cm, inner sep=3.5pt, font=\scriptsize},
+      arr/.style={-{Stealth[length=2mm]}, accent, thick}]
+    \node[box] (a1) {\textbf{Load + level} (fixed rotation to $x$ fwd, $y$ up, $z$ right)\hfill\textbf{24,000 pts}};
+    \node[box, below=of a1] (a2) {\textbf{Height crop} $y\in[-10,-0.2]$ m\hfill\textbf{9,089}};
+    \node[box, below=of a2] (a3) {\textbf{Statistical outlier removal} ($k=50$, $\alpha=1.1$)\hfill\textbf{8,251}};
+    \node[box, below=of a3] (a4) {\textbf{Region growing} on normals: ground and walls removed\hfill\textbf{4,025}};
+    \node[box, below=of a4] (a5) {\textbf{Euclidean clustering} (5 cm)\hfill\textbf{67 clusters}};
+    \node[box, right=6mm of a1] (b1) {\textbf{Geometric gates} (size, ground contact, height)\hfill\textbf{9 candidates}};
+    \node[box, below=of b1] (b2) {\textbf{ICP against a cone model}, fitness + yaw gate\hfill\textbf{6 cones}};
+    \node[box, below=of b2] (b3) {\textbf{Left/right split} (side-consistent greedy growth)\hfill\textbf{2 + 3}};
+    \node[box, below=of b3] (b4) {\textbf{Racing line} (bounded min-curvature, BOBYQA)\hfill\textbf{2 gates}};
+    \node[box, below=of b4] (b5) {\textbf{Obstacles}: scan minus cones, filtered\hfill\textbf{5,731 pts}};
+    \draw[arr] (a1) -- (a2); \draw[arr] (a2) -- (a3); \draw[arr] (a3) -- (a4); \draw[arr] (a4) -- (a5);
+    \draw[arr] (a5.east) -- ++(3mm,0) |- (b1.west);
+    \draw[arr] (b1) -- (b2); \draw[arr] (b2) -- (b3); \draw[arr] (b3) -- (b4); \draw[arr] (b4) -- (b5);
+  \end{tikzpicture}
+  \caption{Cone pipeline on \code{cones.pcd} with the GUI default parameters, with the
+  measured count after each stage. Odometry is a separate program
+  (Section~\ref{sec:odometry}).}
+  \label{fig:pipeline}
+  \end{figure}
+
+  The repository builds two programs. \file{GUIAndRacingLine} is the Qt viewer that runs the
+  cone pipeline; its logic lives in free functions under \file{logic/}, one file per stage.
+  \file{OdometryWithProcessing} is a command-line program around a small odometry library
+  (\file{odometry.h}). Tests and evaluation tools are in each project's \file{tests/} folder.
+
+  % ======================================================================
+  \RuleSection{Methods}
+  \label{sec:methods}
+
+  \begin{description}
+    \item[] \textbf{Preprocessing.} A fixed rotation levels the scan. A height pass-through
+      filter and statistical outlier removal (SOR) follow \citep{rusu2008towards}.
+    \item[] \textbf{Ground and wall removal.} Region growing on surface normals
+      \citep{rabbani2006segmentation} finds smooth regions of at least 500 points. Cones never
+      reach that size (the largest has 113 points), so every such region is removed.
+    \item[] \textbf{Clustering.} Euclidean cluster extraction with a 5\,cm tolerance and 8--500
+      points per cluster \citep{rusu2009thesis}.
+    \item[] \textbf{Cone recognition.} Clusters must have at least 10 points, touch the ground and
+      be 0.2--0.5\,m tall. Each survivor is aligned to a synthetic cone surface with
+      point-to-point ICP \citep{besl1992icp} and accepted if the mean squared residual is below
+      0.005\,m$^2$ and the rotation about the vertical axis is below 13$^\circ$.
+    \item[] \textbf{Left/right split.} Seeds: the closest cone on each side of the car. Each
+      boundary then grows by its nearest remaining cone that lies on the correct side of the
+      \emph{other} boundary and closer to its own, with the turn limited to $\pm45^\circ$. The
+      two side conditions are mutually exclusive, so a boundary cannot jump across the track.
+    \item[] \textbf{Racing line.} Left and right cones are paired into gates. The decision
+      variables are the lateral offsets $d_i$ along each gate's normal, bounded by the half-width
+      $w_i$. The cost is
+      \begin{equation}
+        J(\bm d)=\sum_i \kappa_i^2+0.1\sum_i (d_{i+1}-d_i)^2,\qquad
+        \kappa_i=\frac{2\,\theta_i}{\lVert\bm a_i\rVert+\lVert\bm b_i\rVert},\qquad |d_i|\le w_i ,
+      \end{equation}
+      where $\theta_i=\operatorname{atan2}(\bm a_i\times\bm b_i,\ \bm a_i\cdot\bm b_i)$ is the
+      turning angle between consecutive segments $\bm a_i,\bm b_i$. The car is a fixed first
+      point, so the line leaves the car smoothly. The problem is solved with the derivative-free,
+      bound-constrained BOBYQA \citep{powell2009bobyqa} from NLopt \citep{johnson_nlopt}.
+    \item[] \textbf{Odometry.} Both scans are cropped, levelled and SOR-filtered, then registered
+      with point-to-point ICP (70 iterations, correspondences limited to 1\,m). PCL returns
+      $T_{21}$, which maps the first scan into the second. The car's displacement in the first
+      frame is the translation of $T_{21}^{-1}$, i.e.\ $-R^\top\bm t$.
+  \end{description}
+
+  % ======================================================================
+  \RuleSection{Validation approach}
+  \label{sec:validation}
+
+  The recorded scans have no labels, so accuracy cannot be measured on them. Instead, every
+  module is tested on inputs whose correct output is \emph{known by construction}:
+
+  \begin{table}[htbp]
+  \small
+  \centering
+  \renewcommand{\arraystretch}{1.1}
+  \begin{tabularx}{\textwidth}{@{}L{3.3cm} L{5.3cm} X@{}}
+  \toprule
+  \textbf{Module} & \textbf{Ground truth} & \textbf{Tool} \\
+  \midrule
+  Left/right split & 10 synthetic tracks (straights, curves, S-curve, hairpin, car offset and yawed), clean and with noise or missing cones, 100 random seeds each & \code{eval\_left\_right} (ctest + HTML report) \\[.15cm]
+  Racing line & Analytic optima (straight, constant arc), exact interpolation geometry, bounds & \code{test\_racing\_line} (ctest) \\[.15cm]
+  Cone ICP & Known rotations of the cone model; simulated single views of cones and cone-sized non-cones & \code{test\_cone\_icp} (ctest) \\[.15cm]
+  Odometry & A known motion applied to \code{first.pcd}, with independent sampling, 1\,cm noise and partial overlap & \code{test\_odometry} (ctest) \\[.15cm]
+  Whole cone pipeline & Ray-cast LiDAR scans (24,000 rays) of 5 scenes with cones, walls, obstacles and cone-sized decoys & \code{eval\_pipeline} (HTML report) \\
+  \bottomrule
+  \end{tabularx}
+  \caption{Validation matrix.}
+  \label{tab:validation}
+  \end{table}
+
+  The two HTML reports draw every case from above: true and predicted sides, wrong cones
+  circled, missed cones and false positives marked. A human reviewer can then confirm the
+  metrics, and check the recorded scan, for which no metric exists.
+
+  % ======================================================================
+  \RuleSection{Results}
+  \label{sec:results}
+
+  \subsection{Recorded scan}
+  \label{sec:real}
+
+  \begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+  \begin{axis}[width=0.62\textwidth, height=7.2cm, axis equal image,
+      xmin=-1.6, xmax=2.0, ymin=-0.3, ymax=5.9,
+      xlabel={lateral $z$ [m] (right $>0$)}, ylabel={forward $x$ [m]},
+      label style={font=\small}, tick label style={font=\scriptsize},
+      legend style={font=\scriptsize, at={(1.03,0.5)}, anchor=west, draw=none}]
+    \addplot[only marks, mark=*, mark size=3pt, leftc] coordinates {(-0.562,2.849) (-0.827,4.882)};
+    \addlegendentry{left cone}
+    \addplot[only marks, mark=*, mark size=3pt, rightc] coordinates {(0.695,2.879) (0.457,3.977) (0.649,5.328)};
+    \addlegendentry{right cone}
+    \addplot[only marks, mark=o, mark size=3pt, black!50, thick] coordinates {(1.243,4.511)};
+    \addlegendentry{unassigned}
+    \addplot[very thick, orange!90!black] coordinates {(0,0) (-0.447,2.782) (-0.699,4.347)};
+    \addlegendentry{racing line}
+    \addplot[only marks, mark=triangle*, mark size=4pt, black] coordinates {(0,0)};
+    \addlegendentry{car}
+  \end{axis}
+  \end{tikzpicture}
+  \caption{Result on \code{cones.pcd} (top view). The sixth cone sits 0.6\,m outside the right
+  boundary and fits neither side, so it is left unassigned rather than guessed.}
+  \label{fig:real}
+  \end{figure}
+
+  Six cones are detected, with ICP residuals of 1.9--3.4\,cm RMS. Two are assigned to the left
+  boundary and three to the right. With two cones on the left there are two gates. The optimal
+  line through them is a straight line from the car (cost $\approx 0$), which is the expected
+  minimum-curvature answer for such a short horizon.
+
+  \subsection{Left/right split}
+
+  \begin{table}[htbp]
+  \small
+  \centering
+  \begin{tabular}{@{}lrr@{}}
+  \toprule
+  \textbf{Condition (10 tracks, 100 seeds each)} & \textbf{Previous version} & \textbf{Current} \\
+  \midrule
+  Clean tracks classified perfectly & 2 / 10 & \textbf{10 / 10} \\
+  Accuracy on clean tracks & 7.7--100\,\% & \textbf{100\,\%} \\
+  Perfect runs, 5\,cm position noise & 0\,\% & \textbf{100\,\%} \\
+  Perfect runs, 15\,cm position noise & 0\,\% & 68--100\,\% \\
+  Perfect runs, 10\,\% of cones missing & 0--79\,\% & 44--100\,\% \\
+  \bottomrule
+  \end{tabular}
+  \caption{Left/right split on synthetic tracks. Ranges are over the 10 tracks; the weakest
+  cases are the hairpin and the S-curve with missing cones.}
+  \label{tab:lr}
+  \end{table}
+
+  When a decision is ambiguous, the current split leaves the cone unassigned rather than
+  putting it on the wrong side. This keeps wrong boundaries out of the racing line.
+
+  \subsection{Racing line}
+
+  \begin{itemize}
+    \item \textbf{Straight track:} the line is the centreline; maximum offset 0.000\,m.
+    \item \textbf{Constant arc ($R=10$\,m):} the line hugs the outer edge. The end points sit exactly
+      on the bound and interior points within 2.3\,\% of the half-width. That small gap is the
+      true discrete optimum: it has a lower cost than putting every point on the bound.
+    \item \textbf{Start at the car:} including the car in the cost reduces the initial turn from
+      57.3$^\circ$ to 0.9$^\circ$.
+    \item \textbf{All 10 synthetic tracks:} no bound violation, no reversal, forward progress at
+      every gate; largest turn 24.6$^\circ$.
+    \item \textbf{Drawn line:} it passes through every optimised point, in order, within $2\,\mu$m.
+  \end{itemize}
+
+  \subsection{Odometry}
+  \label{sec:odometry}
+
+  \begin{table}[htbp]
+  \small
+  \centering
+  \begin{tabular}{@{}lrrrr@{}}
+  \toprule
+  & \multicolumn{2}{c}{\textbf{Unbounded (previous)}} & \multicolumn{2}{c}{\textbf{1\,m bound (current)}} \\
+  \cmidrule(lr){2-3}\cmidrule(l){4-5}
+  \textbf{True motion (forward, left, yaw)} & position err. & rotation err. & position err. & rotation err. \\
+  \midrule
+  0.5\,m, 0\,m, 0$^\circ$     & 0.837\,m & 10.07$^\circ$ & \textbf{0.002\,m} & \textbf{0.00$^\circ$} \\
+  0.5\,m, +0.2\,m, +2$^\circ$ & 0.962\,m &  8.66$^\circ$ & \textbf{0.002\,m} & \textbf{0.00$^\circ$} \\
+  0.3\,m, $-0.1$\,m, $-3^\circ$ & 0.873\,m & 10.13$^\circ$ & \textbf{0.002\,m} & \textbf{0.00$^\circ$} \\
+  1.0\,m, 0\,m, +5$^\circ$    & 0.774\,m & 10.08$^\circ$ & \textbf{0.002\,m} & \textbf{0.00$^\circ$} \\
+  \bottomrule
+  \end{tabular}
+  \caption{Odometry on synthetic scan pairs built from \code{first.pcd} with a known motion.
+  With PCL's default unbounded correspondences, points with no counterpart in the other scan
+  dominate the fit; with a 1\,m bound the motion is recovered.}
+  \label{tab:odo}
+  \end{table}
+
+  On the recorded pair the current estimate is 0.41\,m forward and 0.27\,m left (0.49\,m in the
+  ground plane), with a 6.3$^\circ$ rotation. ICP stops at the 70-iteration cap, and the residual
+  over matched pairs is 0.46\,m RMS.
+
+  \begin{warnbox}[Limitation: the recorded odometry pair cannot be verified]
+  \small
+  The two recorded scans are levelled with different hand-tuned pitch corrections
+  ($-10^\circ$ and $-3^\circ$). Part of the estimated rotation and the 0.21\,m vertical motion
+  most likely absorb that difference. The method is shown correct on synthetic pairs; the
+  accuracy on this particular pair is unknown. Automatic levelling (ground-plane fit) and a
+  motion prior would remove this uncertainty.
+  \end{warnbox}
+
+  \subsection{Cone detection}
+  \label{sec:detection}
+
+  On simulated scans (5 scenes, 3 seeds), the detector reaches \textbf{79\,\% precision and
+  37\,\% recall}; the centroid error is 6.9\,cm, biased towards the sensor because only the
+  near side of each cone is seen. Tracing every true cone through the stages shows three
+  separate losses:
+  \begin{enumerate}
+    \item SOR with $k=50$ neighbours removes every cone beyond about 6\,m: such cones have fewer
+      than 50 points, so their neighbourhood reaches the ground and they look like outliers.
+    \item The 5\,cm clustering tolerance starts splitting cones at about 5\,m.
+    \item The yaw gate rejects true cones. A cone is symmetric about its axis, so ICP cannot
+      measure its yaw: a cone turned 30$^\circ$ about its axis is reported at $-7.3^\circ$. The
+      gate accepts 85\,\% of simulated cone views, but also 95\,\% of cone-sized boxes and 100\,\%
+      of buckets.
+  \end{enumerate}
+
+  The \emph{tilt} of the fitted axis is an observable quantity and separates the classes in
+  simulation (cones 5.6--26.6$^\circ$, non-cones 30.7--56.8$^\circ$). Table~\ref{tab:variants}
+  measures the effect of replacing the gate and retuning the two filters.
+
+  \begin{table}[htbp]
+  \small
+  \centering
+  \begin{tabular}{@{}lrrrrr@{}}
+  \toprule
+  \textbf{Detector variant} & \textbf{Precision} & \textbf{Recall} & \textbf{Sides ok} & \textbf{Line in track} & \textbf{Cones, recorded} \\
+  \midrule
+  Current (yaw $<13^\circ$) & 79\,\% & 37\,\% & 85\,\% & 59\,\% & 6 \\
+  No yaw gate & 73\,\% & 52\,\% & 82\,\% & 80\,\% & 9 \\
+  Tilt $<20^\circ$ & 94\,\% & 48\,\% & 98\,\% & 88\,\% & 7 \\
+  Tilt $<20^\circ$, SOR $k=10$, clustering 8\,cm & 96\,\% & 70\,\% & 75\,\% & 88\,\% & 6 \\
+  \bottomrule
+  \end{tabular}
+  \caption{Detector variants on simulated scans, and the number of cones each finds on the
+  recorded scan. ``Line in track'' is the share of the racing line inside the true track,
+  where a line was produced.}
+  \label{tab:variants}
+  \end{table}
+
+  The tilt gate is clearly better in simulation. On the recorded scan, two candidates rejected
+  by the current gate, at $(x,z)=(1.78,+0.55)$ and $(1.99,-0.65)$\,m, form a symmetric pair
+  1.2\,m apart and about 1\,m before the first detected pair: very likely the nearest gate of
+  cones, partly cut by the lower edge of the field of view. The tilt gate recovers one of them.
+  Without labels this cannot be confirmed, so the production gate was left unchanged pending a
+  visual check.
+
+  \subsection{Runtime and resources}
+
+  \begin{table}[htbp]
+  \small
+  \centering
+  \begin{tabular}{@{}lrl@{}}
+  \toprule
+  \textbf{Stage} & \textbf{Time per scan} & \textbf{Notes} \\
+  \midrule
+  Cone detection (crop to ICP) & $221\pm5$\,ms & \\
+  Obstacle extraction & $264\pm18$\,ms & second normal estimation and region growing \\
+  Left/right split & 0.002\,ms & \\
+  Racing line & 0.034\,ms & \\
+  \textbf{Cone pipeline total} & $\bm{485\pm22}$\,\textbf{ms} & median 474\,ms; 2.1\,Hz; peak memory 120\,MiB \\
+  \textbf{Odometry ICP} & \textbf{2.20\,s} & median of 10 runs; 0.45\,Hz; 92\,\% of one core; 108\,MiB \\
+  \bottomrule
+  \end{tabular}
+  \caption{Apple M3, macOS 15.6, Release build (\code{-O3}), single thread. Cone pipeline: 10
+  timed runs after a warm-up.}
+  \label{tab:runtime}
+  \end{table}
+
+  % ======================================================================
+  \RuleSection{Defects found by the validation}
+  \label{sec:fixes}
+
+  Three defects produced results that looked plausible on the recorded data but were wrong.
+  Only tests with known answers exposed them.
+  \begin{enumerate}
+    \item \textbf{Left/right split on one coordinate.} A coordinate swap put the lateral position
+      in a field the algorithm did not read, so distances and angles used the lateral offset
+      alone. Fixed by working in the ground plane throughout; 2/10 $\to$ 10/10 clean tracks.
+    \item \textbf{Racing line drawn differently from what was optimised.} Each drawn segment
+      reused one offset for both ends, the last point was never drawn, and the optimiser
+      ignored the car. The old curvature term also gave a U-turn zero cost. All four are fixed
+      and covered by tests.
+    \item \textbf{Odometry off by about 0.8\,m.} Unbounded correspondences, plus a sign inversion
+      in the printed displacement. Fixed with a 1\,m bound and a single, tested displacement
+      formula.
+  \end{enumerate}
+
+  % ======================================================================
+  \RuleSection{Limitations and roadmap}
+  \label{sec:roadmap}
+
+  \begin{table}[htbp]
+  \small
+  \centering
+  \renewcommand{\arraystretch}{1.1}
+  \begin{tabularx}{\textwidth}{@{}L{0.8cm} L{5.0cm} X@{}}
+  \toprule
+  \textbf{Prio.} & \textbf{Item} & \textbf{Evidence and proposed action} \\
+  \midrule
+  1 & Cone recall at range & 37\,\% recall; SOR and clustering lose far cones. Make both
+      range-aware, or downsample adaptively; target the 70\,\% measured with retuned filters. \\[.15cm]
+  2 & Cone/non-cone decision & Yaw is not observable; replace it with a tilt gate after
+      confirming the extra recorded cluster; add labelled scans for precision/recall by range. \\[.15cm]
+  3 & Real-time throughput & 0.49\,s vs.\ 0.1\,s budget. Share normals and kd-trees between the
+      two region-growing passes, downsample, parallelise. \\[.15cm]
+  4 & Odometry on real data & Automatic levelling (ground-plane RANSAC \citep{fischler1981ransac}),
+      motion prior, point-to-plane ICP or GICP \citep{segal2009gicp}; report convergence and
+      inlier ratio. \\[.15cm]
+  5 & Gate pairing & Gates pair the $i$-th left cone with the $i$-th right cone; a missed cone
+      skews a gate. Pair by nearest opposite cone instead. \\[.15cm]
+  6 & Code structure & Free functions with exported constants; move to classes with explicit
+      parameters and ownership. \\
+  \bottomrule
+  \end{tabularx}
+  \caption{Prioritised next steps, each tied to a measurement in this report.}
+  \label{tab:roadmap}
+  \end{table}
+
+  % ======================================================================
+  \RuleSection{Reproducing the results}
+  \label{sec:repro}
+
+  Dependencies: PCL 1.15, VTK 9.5, Eigen, NLopt 2.10, Boost and Qt 5 or 6 (GUI only); CMake
+  $\ge$ 3.5 (4.0 for the odometry project). From each project folder:
+  \begin{verbatim}
+  cmake -DCMAKE_BUILD_TYPE=Release -G Ninja -S . -B build && cmake --build build
+  ctest --test-dir build
+  \end{verbatim}
+  The two visual reports are written by:
+  \begin{itemize}
+    \item \code{eval\_left\_right -{}-pcd cones.pcd -{}-model ideal\_cone.ply} (left/right split);
+    \item \code{eval\_pipeline -{}-model ideal\_cone.ply} (whole cone pipeline on simulated scans).
+  \end{itemize}
+  The repository README lists every command.
+
+  The code footprint is 1,119 lines for the pipeline logic, 452 for the viewer, 239 for
+  odometry, and 1,361 for tests and evaluation tools (non-blank lines).
+
+  % ======================================================================
+  \bibliographystyle{abbrvnat}
+  \bibliography{references}
+
+  \end{document}

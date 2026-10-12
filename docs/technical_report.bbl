@@ -1,0 +1,48 @@
+\begin{thebibliography}{8}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Besl and McKay(1992)]{besl1992icp}
+P.~J. Besl and N.~D. McKay.
+\newblock A method for registration of 3-{D} shapes.
+\newblock \emph{IEEE Transactions on Pattern Analysis and Machine Intelligence}, 14\penalty0 (2):\penalty0 239--256, 1992.
+
+\bibitem[Fischler and Bolles(1981)]{fischler1981ransac}
+M.~A. Fischler and R.~C. Bolles.
+\newblock Random sample consensus: A paradigm for model fitting with applications to image analysis and automated cartography.
+\newblock \emph{Communications of the ACM}, 24\penalty0 (6):\penalty0 381--395, 1981.
+
+\bibitem[Johnson(2007)]{johnson_nlopt}
+S.~G. Johnson.
+\newblock The {NLopt} nonlinear-optimization package.
+\newblock \url{https://github.com/stevengj/nlopt}, 2007.
+
+\bibitem[Powell(2009)]{powell2009bobyqa}
+M.~J.~D. Powell.
+\newblock The {BOBYQA} algorithm for bound constrained optimization without derivatives.
+\newblock Technical Report NA2009/06, Department of Applied Mathematics and Theoretical Physics, University of Cambridge, 2009.
+
+\bibitem[Rabbani et~al.(2006)Rabbani, van~den Heuvel, and Vosselman]{rabbani2006segmentation}
+T.~Rabbani, F.~A. van~den Heuvel, and G.~Vosselman.
+\newblock Segmentation of point clouds using smoothness constraint.
+\newblock In \emph{ISPRS Commission V Symposium, International Archives of Photogrammetry, Remote Sensing and Spatial Information Sciences}, volume~36, pages 248--253, 2006.
+
+\bibitem[Rusu(2009)]{rusu2009thesis}
+R.~B. Rusu.
+\newblock \emph{Semantic 3{D} Object Maps for Everyday Manipulation in Human Living Environments}.
+\newblock PhD thesis, Technische Universit{\"a}t M{\"u}nchen, 2009.
+
+\bibitem[Rusu et~al.(2008)Rusu, Marton, Blodow, Dolha, and Beetz]{rusu2008towards}
+R.~B. Rusu, Z.~C. Marton, N.~Blodow, M.~Dolha, and M.~Beetz.
+\newblock Towards 3{D} point cloud based object maps for household environments.
+\newblock \emph{Robotics and Autonomous Systems}, 56\penalty0 (11):\penalty0 927--941, 2008.
+
+\bibitem[Segal et~al.(2009)Segal, H{\"a}hnel, and Thrun]{segal2009gicp}
+A.~Segal, D.~H{\"a}hnel, and S.~Thrun.
+\newblock Generalized-{ICP}.
+\newblock In \emph{Robotics: Science and Systems (RSS)}, 2009.
+
+\end{thebibliography}

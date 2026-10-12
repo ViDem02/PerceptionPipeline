@@ -1,15 +1,17 @@
 # GUIAndRacingLine
 
-To build this project, the use of CLion is advised. 
-
-This process has been tested for MacOS 15, M3 processor. 
+Qt viewer and cone pipeline (detection, left/right split, racing line, obstacles).
+Tested on macOS 15 (Apple M3); CLion works as well as the command line.
 
 ```
-cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug  
-cd cmake-build-debug  
-cmake --build .
-./sample_consensus first.pcd second.pcd
+cmake -DCMAKE_BUILD_TYPE=Release -G Ninja -S . -B build
+cmake --build build
+cd external_files && ../build/pcl_visualizer
 ```
+
+The viewer's default inputs are `cones.pcd` and `ideal_cone.ply` relative to the working
+directory, hence the `cd external_files`. Press Load, then Compute.
+
 ## Tests and evaluations
 
 `ctest` (from the build directory) runs the automatic checks:

@@ -1,34 +1,32 @@
-# LiDAR Odometry with ICP (`main.cpp`)
+# LiDAR Odometry with ICP
 
-This C++ script performs point cloud odometry using the Iterative Closest Point (ICP) algorithm with PCL. It aligns two `.pcd` files, estimates the transformation, and visualizes the result.
+Estimates the vehicle motion between two LiDAR scans with point-to-point ICP (PCL). The logic is in
+`odometry.h`/`odometry.cpp`; `main.cpp` is the command-line program and viewer.
 
 ## Features
 
 - Loads two point cloud files (`.pcd`)
 - Preprocesses clouds (pass-through filter, outlier removal, transforms)
 - Runs ICP to estimate relative pose
-- Prints transformation matrix and north/east displacement
+- Prints the transformation and the vehicle displacement
 - Visualizes original and aligned clouds side-by-side
 
 ## Usage
 
 ### Build
 
-This process has been tested for MacOS 15, M3 processor. 
-
-For the building of this project using CMake is the easiest root. 
+Tested on macOS 15 (Apple M3).
 
 ```
-cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug  
-cd cmake-build-debug  
-cmake --build .
-./sample_consensus first.pcd second.pcd
+cmake -DCMAKE_BUILD_TYPE=Release -G Ninja -S . -B build
+cmake --build build
+ctest --test-dir build
 ```
 
 ### Run
 
 ```sh
-./odometry_icp first.pcd second.pcd
+cd "external files" && ../build/sample_consensus first.pcd second.pcd
 ```
 
 For a repeatable headless benchmark using the same preprocessing and ICP path

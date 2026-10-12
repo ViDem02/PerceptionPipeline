@@ -1,7 +1,3 @@
-Here is a README for `gen_cone.py`:
-
----
-
 # Cone Surface Point Cloud Generator (`gen_cone.py`)
 
 This script generates a PLY file containing randomly sampled points on the *outer surface* of a cone. It is useful for recognizing cones via ICP.
@@ -31,6 +27,9 @@ python3 gen_cone.py
 ```
 
 By default, this will create a file named `cmake-build-debug/cone_surface_only.ply` with 200 surface points.
+
+The model shipped with the viewer, `GUIAndRacingLine/external_files/ideal_cone.ply`, has 150 surface
+points, height 0.40 m and base radius 0.20 m.
 
 ### Customization
 
