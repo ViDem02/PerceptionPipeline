@@ -40,10 +40,21 @@ PERCEPTION_HEADLESS=1 ./sample_consensus first.pcd second.pcd
 
 ## Output
 
-- Console: ICP score, transformation matrix, north/east displacement of vehicle
-- GUI: Side-by-side visualization of clouds before/after alignment
+- Console: ICP score (mean squared distance of the matched pairs), whether ICP stopped at the
+  iteration cap, the transformation first -> second, and the vehicle displacement
+  (-R^T t, in the frame of the first scan)
+- GUI: left, second.pcd (white) and first.pcd (green); right, second.pcd (white) and first.pcd
+  aligned by ICP (red)
+
+## ICP settings and ground-truth test
+
+Correspondences farther than 1 m are rejected (`kMaxCorrespondenceDistance` in `odometry.h`).
+`test_odometry` (run by `ctest`) builds a synthetic second scan from `first.pcd` with a known
+motion (independent sampling, noise, partial overlap) and checks the estimate. With 1 m the
+motion is recovered within 2 mm and below 0.01 deg; with PCL's default unbounded correspondences
+(the previous setting) the error is about 0.8 m and 10 deg.
 
 ## Notes
 
-- Axes: x = East, y = Up, z = North
+- Axes (levelled frame): x forward ("East" in the original naming), y up, z right ("North")
 - Adjust file names and parameters as needed

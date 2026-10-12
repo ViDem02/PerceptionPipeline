@@ -83,6 +83,25 @@ void PCLViewer::addPointCloudsToViewer() const
     viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,2,"cones_cloud");
 
 
+    // Classified cone centres: left boundary blue, right boundary yellow.
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler_left_cones(
+        left_cones,
+        0,
+        90,
+        255);
+    viewer->addPointCloud(left_cones, handler_left_cones, "left_cones");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,12,"left_cones");
+
+
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler_right_cones(
+        right_cones,
+        255,
+        230,
+        0);
+    viewer->addPointCloud(right_cones, handler_right_cones, "right_cones");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE,12,"right_cones");
+
+
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler_obst_cloud(
         obst_cloud,
         0,
@@ -203,6 +222,8 @@ PCLViewer::PCLViewer(QWidget *parent) : QMainWindow(parent),
     obst_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
     racing_line.reset(new pcl::PointCloud<pcl::PointXYZ>);
     cone_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    left_cones.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    right_cones.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
     reference_cloud->push_back(pcl::PointXYZ(1, 0, 0));
     reference_cloud->push_back(pcl::PointXYZ(-1, 0, 0));
@@ -278,6 +299,22 @@ void PCLViewer::updatePointClouds() const
     viewer->updatePointCloud(cone_cloud, handler_cones_cloud, "cones_cloud");
 
 
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler_left_cones(
+        left_cones,
+        0,
+        90,
+        255);
+    viewer->updatePointCloud(left_cones, handler_left_cones, "left_cones");
+
+
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler_right_cones(
+        right_cones,
+        255,
+        230,
+        0);
+    viewer->updatePointCloud(right_cones, handler_right_cones, "right_cones");
+
+
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler_obst_cloud(
         obst_cloud,
         0,
@@ -347,6 +384,8 @@ void PCLViewer::computeButtonPressed()
     obst_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
     racing_line.reset(new pcl::PointCloud<pcl::PointXYZ>);
     cone_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    left_cones.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    right_cones.reset(new pcl::PointCloud<pcl::PointXYZ>);
 
     pcl::copyPointCloud(*original_cloud, *working_cloud);
 
@@ -378,6 +417,9 @@ void PCLViewer::computeButtonPressed()
                 -45,
                 +45,
                 dist_left_right_max_dist);
+
+        left_cones = src_left;
+        right_cones = src_right;
 
         racing_line = get_racing_line_point_cloud(
             src_left,

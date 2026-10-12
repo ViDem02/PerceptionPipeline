@@ -3,6 +3,9 @@
 #ifndef SECOND_PRJ_SETUP_GET_CONES_CLOUD_H
 #define SECOND_PRJ_SETUP_GET_CONES_CLOUD_H
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
 struct ConeDetectionResults
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr centers_of_mass;

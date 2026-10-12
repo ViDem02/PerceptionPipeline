@@ -1,195 +1,180 @@
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
+#include "distinguish_left_right.h"
+
+#include <algorithm>
 #include <vector>
 #include <cmath>
 #include <limits>
-#include <iostream>
-#include <numeric>
+
+/*
+ Reference frame (the one produced by the transform in PCLViewer::loadButtonPressed,
+ checked on external_files/cones.pcd):
+   x : forward, direction of travel of the car (LiDAR only sees x >= 0)
+   y : up       (ground at y ~ -0.8, cones are kept below y = -0.2)
+   z : right
+ The track lies on the ground plane (x, z). y is a height and is ignored when measuring
+ distances and angles. The output clouds contain the input points unchanged, so they are
+ expressed in the same frame as the input.
+*/
 
 namespace cones{
 
-struct Result {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr left;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr right;
+namespace {
+
+// Projection of a point on the ground plane.
+struct Ground {
+    double x;
+    double z;
 };
 
-static double wrapToPi(double a) {
+Ground ground(const pcl::PointXYZ& p) { return {p.x, p.z}; }
+
+double dist_sq(const Ground& a, const Ground& b) {
+    const double dx = a.x - b.x;
+    const double dz = a.z - b.z;
+    return dx*dx + dz*dz;
+}
+
+double wrapToPi(double a) {
     while (a > M_PI) a -= 2*M_PI;
     while (a < -M_PI) a += 2*M_PI;
     return a;
 }
 
-static double deg(double rad) { return rad * 180.0 / M_PI; }
+double deg(double rad) { return rad * 180.0 / M_PI; }
 
-// Compute signed turn angle between prev->curr and curr->next (degrees)
-static double turn_angle_deg(const pcl::PointXYZ& prev, const pcl::PointXYZ& curr, const pcl::PointXYZ& next) {
-    const double v1x = curr.x - prev.x; const double v1y = curr.y - prev.y;
-    const double v2x = next.x - curr.x; const double v2y = next.y - curr.y;
-    double a1 = std::atan2(v1y, v1x);
-    double a2 = std::atan2(v2y, v2x);
+// Signed turn angle between prev->curr and curr->next (degrees, positive = turning right).
+double turn_angle_deg(const Ground& prev, const Ground& curr, const Ground& next) {
+    const double a1 = std::atan2(curr.z - prev.z, curr.x - prev.x);
+    const double a2 = std::atan2(next.z - curr.z, next.x - curr.x);
     return deg(wrapToPi(a2 - a1));
+}
+
 }
 
 Result distinguishLeftRight(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr& src_cones,
-    double robot_x, double robot_y,
-    double angle_low_deg = -45.0, double angle_high_deg = 45.0,
-    double max_distance = std::numeric_limits<double>::infinity())
+    double robot_x, double robot_z,
+    double angle_low_deg, double angle_high_deg,
+    double max_distance)
 {
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cones(new pcl::PointCloud<pcl::PointXYZ>());
-
-    // Clamp negative distances to zero to avoid unintended inclusion.
-    double md = std::max(0.0, max_distance);
-    double max_dist_sq = md * md;
-
-    for (int i = 0; i < src_cones->size(); ++i)
-    {
-        pcl::PointXYZ p;
-        p.x = src_cones->points[i].z;
-        p.z = src_cones->points[i].x;
-        p.y = 0;
-        // distance in the transformed frame using x,y (z unused for planning)
-        double dx = p.x - robot_x;
-        double dy = p.y - robot_y;
-        double dist_sq = dx*dx + dy*dy;
-        if (dist_sq <= max_dist_sq) {
-            cones->push_back(p);
-        }
-    }
-
     Result res{pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(),
                pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>()};
 
-    const int N = static_cast<int>(cones->size());
-    if (N < 2) return res;
+    const Ground robot{robot_x, robot_z};
 
-    // pick two closest cones to robot
-    std::vector<int> idx(N);
-    std::iota(idx.begin(), idx.end(), 0);
-    std::sort(idx.begin(), idx.end(), [&](int a, int b){
-        const auto &pa = cones->points[a];
-        const auto &pb = cones->points[b];
-        double da = (pa.x-robot_x)*(pa.x-robot_x) + (pa.y-robot_y)*(pa.y-robot_y);
-        double db = (pb.x-robot_x)*(pb.x-robot_x) + (pb.y-robot_y)*(pb.y-robot_y);
-        return da < db;
-    });
-    int first_idx = idx[0];
-    int second_idx = idx[1];
+    // Clamp negative distances to zero to avoid unintended inclusion.
+    const double md = std::max(0.0, max_distance);
+    const double max_dist_sq = md * md;
+
+    // Cones within range: ground projection + index in src_cones.
+    std::vector<Ground> cones;
+    std::vector<int> src_idx;
+    for (int i = 0; i < static_cast<int>(src_cones->size()); ++i)
+    {
+        const Ground p = ground(src_cones->points[i]);
+        if (dist_sq(p, robot) <= max_dist_sq) {
+            cones.push_back(p);
+            src_idx.push_back(i);
+        }
+    }
+
+    const int N = static_cast<int>(cones.size());
+
+    // Seeds: closest cone on each side of the car. The car heads along +x,
+    // so cones with z < robot_z are on its left.
+    int seed_l = -1, seed_r = -1;
+    double best_l = std::numeric_limits<double>::infinity();
+    double best_r = std::numeric_limits<double>::infinity();
+    for (int i = 0; i < N; ++i) {
+        const double d = dist_sq(cones[i], robot);
+        if (cones[i].z < robot.z) {
+            if (d < best_l) { best_l = d; seed_l = i; }
+        } else {
+            if (d < best_r) { best_r = d; seed_r = i; }
+        }
+    }
+
+    std::vector<int> path_l_idx;
+    std::vector<int> path_r_idx;
+    if (seed_l >= 0) path_l_idx.push_back(seed_l);
+    if (seed_r >= 0) path_r_idx.push_back(seed_r);
+
+    auto collect = [&]{
+        res.left->reserve(path_l_idx.size());
+        res.right->reserve(path_r_idx.size());
+        for (int i : path_l_idx) res.left->push_back(src_cones->points[src_idx[i]]);
+        for (int i : path_r_idx) res.right->push_back(src_cones->points[src_idx[i]]);
+        return res;
+    };
+
+    // Both boundaries are needed to grow the paths.
+    if (seed_l < 0 || seed_r < 0) return collect();
 
     std::vector<char> remaining(N, 1);
-    remaining[first_idx] = remaining[second_idx] = 0;
+    remaining[seed_l] = remaining[seed_r] = 0;
 
-    std::vector<int> path_l_idx{first_idx};
-    std::vector<int> path_r_idx{second_idx};
+    // Last direction of `path` (unit vector), or of `other` if `path` has a single cone
+    // (the two boundaries run parallel), or the car heading (+x) if both have a single cone.
+    auto direction = [&](const std::vector<int>& path, const std::vector<int>& other)->Ground{
+        const std::vector<int>& p = path.size() >= 2 ? path : other;
+        if (p.size() < 2) return {1.0, 0.0};
+        const Ground& end = cones[p.back()];
+        const Ground& prev = cones[p[p.size()-2]];
+        const double n = std::hypot(end.x - prev.x, end.z - prev.z);
+        return {(end.x - prev.x) / n, (end.z - prev.z) / n};
+    };
 
-    auto get_point = [&](int i)->const pcl::PointXYZ& { return cones->points[i]; };
+    // Signed distance of `p` from the line through the last cone of `path`, along the path's
+    // direction (positive = right).
+    auto lateral = [&](const std::vector<int>& path, const std::vector<int>& other, const Ground& p)->double{
+        const Ground& end = cones[path.back()];
+        const Ground d = direction(path, other);
+        return d.x * (p.z - end.z) - d.z * (p.x - end.x);
+    };
 
-    for (int step = 0; step < N-2; ++step) {
-        std::vector<int> rem_idx;
-        for (int i=0;i<N;++i) if (remaining[i]) rem_idx.push_back(i);
-        if (rem_idx.empty()) break;
+    // A cone fits the left path if it lies on the left of the right boundary and closer to the
+    // left boundary than to the right one (both extrapolated along their last direction);
+    // symmetrically for the right path. The two conditions are mutually exclusive, so a path
+    // cannot jump across the track when the nearest cone is on the opposite boundary
+    // (tight curves, missing cones).
+    auto fits_left = [&](int j){
+        const double lat_l = lateral(path_l_idx, path_r_idx, cones[j]);
+        const double lat_r = lateral(path_r_idx, path_l_idx, cones[j]);
+        return lat_r < 0 && std::abs(lat_l) < std::abs(lat_r);
+    };
+    auto fits_right = [&](int j){
+        const double lat_l = lateral(path_l_idx, path_r_idx, cones[j]);
+        const double lat_r = lateral(path_r_idx, path_l_idx, cones[j]);
+        return lat_l > 0 && std::abs(lat_r) < std::abs(lat_l);
+    };
 
-        // odd case: one cone left -> assign to side with least angle
-        if (rem_idx.size() == 1) {
-            int last = rem_idx[0];
-            double dL = 0.0, dR = 0.0;
-            if (path_l_idx.size() >= 2) {
-                dL = turn_angle_deg(get_point(path_l_idx[path_l_idx.size()-2]),
-                                    get_point(path_l_idx.back()),
-                                    get_point(last));
-            }
-            if (path_r_idx.size() >= 2) {
-                dR = turn_angle_deg(get_point(path_r_idx[path_r_idx.size()-2]),
-                                    get_point(path_r_idx.back()),
-                                    get_point(last));
-            }
-            if (std::abs(dL) <= std::abs(dR)) path_l_idx.push_back(last);
-            else path_r_idx.push_back(last);
-            remaining[last] = 0;
-            break;
+    // The path must not turn more than the given limits.
+    auto turn_ok = [&](const std::vector<int>& path, int j){
+        if (path.size() < 2) return true;
+        const double a = turn_angle_deg(cones[path[path.size()-2]], cones[path.back()], cones[j]);
+        return a >= angle_low_deg && a <= angle_high_deg;
+    };
+
+    // nearest remaining cone to the end of `path` that fits its side and turn limits
+    auto next_cone = [&](const std::vector<int>& path, auto fits)->int{
+        int best = -1; double bestd = std::numeric_limits<double>::infinity();
+        for (int j = 0; j < N; ++j) if (remaining[j] && fits(j) && turn_ok(path, j)) {
+            double d = dist_sq(cones[j], cones[path.back()]);
+            if (d < bestd) { bestd = d; best = j; }
         }
+        return best;
+    };
 
-        // compute nearest candidates to current L/R
-        auto nearest_to = [&](int current)->int{
-            int best = -1; double bestd = std::numeric_limits<double>::infinity();
-            const auto &pc = get_point(current);
-            for (int j : rem_idx) {
-                const auto &p = get_point(j);
-                double d = (p.x-pc.x)*(p.x-pc.x)+(p.y-pc.y)*(p.y-pc.y);
-                if (d < bestd) { bestd = d; best = j; }
-            }
-            return best;
-        };
-
-        int candL = nearest_to(path_l_idx.back());
-        int candR = nearest_to(path_r_idx.back());
-
-        // if the same candidate, give to the closer one and pick 2nd for the other
-        if (candL == candR) {
-            auto distance_sq = [&](int from, int to){
-                const auto &a = get_point(from); const auto &b = get_point(to);
-                return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
-            };
-            double dl = distance_sq(path_l_idx.back(), candL);
-            double dr = distance_sq(path_r_idx.back(), candR);
-            if (dl < dr) {
-                // find second best for R
-                int second = -1; double bestd = std::numeric_limits<double>::infinity();
-                const auto &pr = get_point(path_r_idx.back());
-                for (int j : rem_idx) if (j != candL) {
-                    const auto &p = get_point(j);
-                    double d = (p.x-pr.x)*(p.x-pr.x)+(p.y-pr.y)*(p.y-pr.y);
-                    if (d < bestd) { bestd = d; second = j; }
-                }
-                candR = second;
-            } else {
-                int second = -1; double bestd = std::numeric_limits<double>::infinity();
-                const auto &pl = get_point(path_l_idx.back());
-                for (int j : rem_idx) if (j != candR) {
-                    const auto &p = get_point(j);
-                    double d = (p.x-pl.x)*(p.x-pl.x)+(p.y-pl.y)*(p.y-pl.y);
-                    if (d < bestd) { bestd = d; second = j; }
-                }
-                candL = second;
-            }
-        }
-
-        // compute turn angles
-        auto safe_turn = [&](const std::vector<int>& path, int cand)->double{
-            if (path.size() >= 2 && cand >= 0) {
-                return turn_angle_deg(get_point(path[path.size()-2]),
-                                      get_point(path.back()),
-                                      get_point(cand));
-            }
-            return 0.0;
-        };
-        double deltaL = safe_turn(path_l_idx, candL);
-        double deltaR = safe_turn(path_r_idx, candR);
-
-        auto bad = [&](double a){ return !std::isnan(a) && (a < angle_low_deg || a > angle_high_deg); };
-        bool badL = bad(deltaL);
-        bool badR = bad(deltaR);
-
-        if (badL || badR) {
-            std::swap(candL, candR);
-            std::swap(deltaL, deltaR);
-            badL = bad(deltaL);
-            badR = bad(deltaR);
-            if (badL) candL = -1;
-            if (badR) candR = -1;
-        }
-
+    // Grow both paths one cone at a time until neither can be extended.
+    while (true) {
+        const int candL = next_cone(path_l_idx, fits_left);
+        const int candR = next_cone(path_r_idx, fits_right);
+        if (candL < 0 && candR < 0) break;
         if (candL >= 0) { path_l_idx.push_back(candL); remaining[candL] = 0; }
         if (candR >= 0) { path_r_idx.push_back(candR); remaining[candR] = 0; }
     }
 
-    res.left->reserve(path_l_idx.size());
-    res.right->reserve(path_r_idx.size());
-    for (int i : path_l_idx) res.left->push_back(cones->points[i]);
-    for (int i : path_r_idx) res.right->push_back(cones->points[i]);
-    return res;
+    return collect();
 }
 
 }
-

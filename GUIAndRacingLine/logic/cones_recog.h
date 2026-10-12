@@ -8,6 +8,21 @@
 #include <pcl/PointIndices.h>
 #include <pcl/point_cloud.h>
 #include <pcl/impl/point_types.hpp>
+#include <Eigen/Core>
+
+// ICP alignment of a cluster onto the cone model (both centred on their centroid).
+struct ConeAlignment {
+    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();  // centred cluster -> model
+    double fitness = 0.0;     // mean squared distance [m^2]
+    float yaw_deg = 0.0f;     // rotation about the vertical axis y
+    float tilt_deg = 0.0f;    // angle between the vertical and the rotated vertical
+    bool converged = false;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr aligned;  // centred cluster after the transform
+};
+
+// cone_model must already be centred (detectCones does it).
+ConeAlignment alignClusterToConeModel(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cluster,
+                                      const pcl::PointCloud<pcl::PointXYZ>::Ptr &cone_model, int icp_max_iter);
 
 std::vector<int> detectCones(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,

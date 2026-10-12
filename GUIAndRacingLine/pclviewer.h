@@ -78,6 +78,8 @@ protected:
     pcl::PointCloud<pcl::PointXYZ>::Ptr obst_cloud;
     pcl::PointCloud<pcl::PointXYZ>::Ptr racing_line;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cone_cloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr left_cones;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr right_cones;
 
     bool clouds_loaded = false;
 

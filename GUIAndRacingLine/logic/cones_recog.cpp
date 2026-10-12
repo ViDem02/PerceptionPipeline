@@ -12,6 +12,9 @@
 #include <pcl/common/centroid.h>
 #include <pcl/registration/icp.h>
 #include <pcl/console/time.h>
+#include <algorithm>
+
+#include "cones_recog.h"
 
 
 // TODO Convert to class
@@ -69,6 +72,45 @@ void performVisualization(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cone_model,
 }
 
 
+ConeAlignment alignClusterToConeModel(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cluster,
+                                      const pcl::PointCloud<pcl::PointXYZ>::Ptr &cone_model, int icp_max_iter)
+{
+    // Center the cluster
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    Eigen::Vector4f cluster_centroid;
+    pcl::compute3DCentroid(*cluster, cluster_centroid);
+    Eigen::Matrix4f T_center_cluster = Eigen::Matrix4f::Identity();
+    T_center_cluster(0, 3) = -cluster_centroid[0];
+    T_center_cluster(1, 3) = -cluster_centroid[1];
+    T_center_cluster(2, 3) = -cluster_centroid[2];
+    pcl::transformPointCloud(*cluster, *cluster_cloud, T_center_cluster);
+
+    // --- ICP alignment ---
+    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+    icp.setInputSource(cluster_cloud);
+    icp.setInputTarget(cone_model);
+    icp.setMaximumIterations(icp_max_iter);
+    icp.setTransformationEpsilon(1e-8);
+    icp.setEuclideanFitnessEpsilon(1e-8);
+
+    ConeAlignment a;
+    a.aligned.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    icp.align(*a.aligned);
+
+    a.converged = icp.hasConverged();
+    a.transform = icp.getFinalTransformation();
+    a.fitness = icp.getFitnessScore();
+
+    // Rotation of the cluster onto the model (both centred).
+    const Eigen::Matrix3f R = a.transform.block<3, 3>(0, 0);
+    // Rotation around Y (vertical): R = Ry(yaw) * (rotation about a horizontal axis)
+    a.yaw_deg = std::atan2(R(0, 2), R(2, 2)) * 180.0f / M_PI;
+    // Angle between the vertical and the rotated vertical
+    a.tilt_deg = std::acos(std::clamp(R(1, 1), -1.0f, 1.0f)) * 180.0f / M_PI;
+    return a;
+}
+
+
 /* TODO return false if fails, true if it doesn't. */
 bool processClusterForConeDetection(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud, int icp_max_iter,
                                     double fitness_threshold, double height_threshold, double min_cone_height,
@@ -123,53 +165,28 @@ bool processClusterForConeDetection(const pcl::PointCloud<pcl::PointXYZ>::Ptr &c
     pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::copyPointCloud(*cloud, indices.indices, *cluster_cloud);
 
-    // Center the cluster
-    Eigen::Vector4f cluster_centroid;
-    pcl::compute3DCentroid(*cluster_cloud, cluster_centroid);
-    Eigen::Matrix4f T_center_cluster = Eigen::Matrix4f::Identity();
-    T_center_cluster(0, 3) = -cluster_centroid[0];
-    T_center_cluster(1, 3) = -cluster_centroid[1];
-    T_center_cluster(2, 3) = -cluster_centroid[2];
-    pcl::transformPointCloud(*cluster_cloud, *cluster_cloud, T_center_cluster);
-
-    // --- ICP alignment ---
-    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-    icp.setInputSource(cluster_cloud);
-    icp.setInputTarget(cone_model);
-    icp.setMaximumIterations(icp_max_iter);
-    icp.setTransformationEpsilon(1e-8);
-    icp.setEuclideanFitnessEpsilon(1e-8);
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cluster(new pcl::PointCloud<pcl::PointXYZ>);
     time.tic();
-    icp.align(*aligned_cluster);
+    const ConeAlignment alignment = alignClusterToConeModel(cluster_cloud, cone_model, icp_max_iter);
     double t_ms = time.toc();
 
     if (verbose) std::cout << "Cluster " << cluster_id << " | ";
-    if (icp.hasConverged())
+    if (alignment.converged)
     {
-        double score = icp.getFitnessScore();
-        Eigen::Matrix4f transform = icp.getFinalTransformation();
-
-        // --- Extract rotation around Y axis (yaw) ---
-        // Rotation matrix part
-        Eigen::Matrix3f R = transform.block<3, 3>(0, 0);
-        // Compute yaw (rotation around Y)
-        const float yaw = std::atan2(R(0, 2), R(2, 2)); // standard yaw from rotation matrix
-
-        // Limit rotation around Y
-        const float yaw_deg = std::abs(yaw * 180.0f / M_PI);
+        const double score = alignment.fitness;
+        const float yaw_deg = std::abs(alignment.yaw_deg);
 
         if (verbose)
             if (verbose) std::cout << "Converged | Fitness = " << score
-                    << " | Yaw = " << yaw_deg << "°" << std::endl;
+                    << " | Yaw = " << yaw_deg << "° | Tilt = " << alignment.tilt_deg << "°"
+                    << " | " << indices.indices.size() << " pts at x = " << (min_pt.x + max_pt.x) / 2
+                    << ", z = " << (min_pt.z + max_pt.z) / 2 << std::endl;
 
         if (score < fitness_threshold && yaw_deg < max_yaw_deg)
         {
             matched_clusters.push_back(cluster_id);
             if (verbose) std::cout << "  ✅ Cluster " << cluster_id << " matches the cone model!\n";
 
-            if (visualize) performVisualization(cone_model, aligned_cluster);
+            if (visualize) performVisualization(cone_model, alignment.aligned);
         } else if (yaw_deg >= max_yaw_deg)
         {
             if (verbose)
@@ -205,14 +222,14 @@ std::vector<int> detectCones(
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud,
     const std::vector<pcl::PointIndices> &cluster_indices,
     const pcl::PointCloud<pcl::PointXYZ>::Ptr &cone_model,
-    int icp_max_iter = 40,
-    double fitness_threshold = 0.01,
-    double height_threshold = -0.01, // <-- adjust as needed (meters)
-    double min_cone_height = 0.3, // <-- minimum expected cone height in meters
-    double max_cone_height = 0.5,
-    float max_yaw_deg = 20.0f,
-    bool visualize = true,
-    bool verbose = false)
+    int icp_max_iter,
+    double fitness_threshold,
+    double height_threshold,
+    double min_cone_height,
+    double max_cone_height,
+    float max_yaw_deg,
+    bool visualize,
+    bool verbose)
 {
     // TODO da spostare in main parte che legge il file
 
