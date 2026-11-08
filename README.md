@@ -60,12 +60,12 @@ Documentation and task specification:
 
 This process has been tested for MacOS 15, M3 processor. 
 
+Run these commands from the repository root:
+
 ```
-cd GUIAndRacingLine
-cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug  
-cd cmake-build-debug  
-cmake --build .
-./pcl_viewer
+cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S GUIAndRacingLine -B GUIAndRacingLine/cmake-build-debug
+cmake --build GUIAndRacingLine/cmake-build-debug
+./GUIAndRacingLine/cmake-build-debug/pcl_visualizer
 ```
 
 ### OdometryWithProcessing
@@ -73,11 +73,9 @@ cmake --build .
 This process has been tested for MacOS 15, M3 processor. 
 
 ```
-cd OdometryWithProcessing
-cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug  
-cd cmake-build-debug  
-cmake --build .
-./sample_consensus first.pcd second.pcd
+cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S OdometryWithProcessing -B OdometryWithProcessing/cmake-build-debug
+cmake --build OdometryWithProcessing/cmake-build-debug
+./OdometryWithProcessing/cmake-build-debug/sample_consensus first.pcd second.pcd
 ```
 
 
