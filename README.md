@@ -1,99 +1,108 @@
-# E‑Agle Driverless Perception — LiDAR Pipeline
+<div align="center">
 
-This repo contains my complete LiDAR-only perception pipeline for a Formula Student Driverless vehicle. I implemented all five levels plus the bonus interactive visualizer. The work is written in modern C++ with CMake, Point Cloud Library (PCL), and an optimization component for the racing line.
+# 🏎️ E‑Agle Driverless Perception
 
-I did not implement the image path; all deliverables are LiDAR-focused.
+**A LiDAR-only perception pipeline for a Formula Student Driverless car, written from scratch in C++.**
 
-## What’s included
-- Level 1 — LiDAR loading, visualization, and basic preprocessing
-- Level 2 — Cone extraction from point clouds
-- Level 3 — Left/Right cone discrimination (track edge separation)
-- Level 4 — Racing line optimization (minimal curvature with bounds)
-- Level 5 — LiDAR odometry (pairwise registration)
-- Bonus — Interactive GUI to visualize clouds, edges, and racing line
+Raw point cloud ➜ cones ➜ track edges ➜ racing line ➜ odometry
 
-## Key modules and where to find them
+![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white)
+![CMake](https://img.shields.io/badge/CMake-Ninja-064F8C?logo=cmake&logoColor=white)
+![PCL](https://img.shields.io/badge/PCL-point%20clouds-2e7d32)
+![Qt](https://img.shields.io/badge/Qt-5%20%7C%206-41CD52?logo=qt&logoColor=white)
+![NLopt](https://img.shields.io/badge/NLopt-BOBYQA-ff8a00)
+![Levels](https://img.shields.io/badge/levels-5%2F5%20%2B%20bonus-brightgreen)
 
-Interactive GUI + pipeline (bonus and integration):
-- `branch_deliverable/GUIAndRacingLine/` — Qt + PCL visualizer app
-	- `logic/get_cones_cloud.cpp` — extracts cloud of candidate cones from the input point cloud
-	- `logic/get_obstacle_cloud.cpp` — optional obstacle isolation for clarity and evaluation
-	- `logic/distinguish_left_right.cpp` — separates cones into left and right track edges
-	- `logic/racingline_nlopt.cpp` — racing line optimization (see “Racing line” below)
-	- `pclviewer.*` and `*.ui` — Qt-based viewer (bonus), overlays edges and racing line
+<img src="docs/figures/pipeline_demo.svg" alt="Animated PCL viewer: raw LiDAR cloud, outlier removal, cone detection, racing line" width="100%">
 
-Odometry (Level 5):
-- `branch_odometry/odometry_with_processing/` — LiDAR odometry with preprocessing
-	- `main.cpp` — pairwise registration pipeline (ICP-based), displacement export
-	- `displacement_plot.m` — quick plot of estimated motion
+<sub>An animated re-creation of the bundled Qt + PCL viewer (<a href="Screenshot.png">real screenshot</a>): <b>green</b> raw cloud · <b>cyan</b> obstacles · <b>red</b> detected cones · <b>yellow</b> racing line</sub>
 
-Racing line (standalone minimal example used during development):
-- `pathplanning/racingline_nlopt_cpp/` — small NLOPT demo of the racing-line objective
+</div>
 
-Documentation and task specification:
-- `branch_deliverable/original_readme.md` — original task brief
+---
 
-## Algorithms (concise)
+## ✨ What's inside
 
-1) Cone extraction (Level 2)
-- Spatial filtering and geometric priors to isolate 3D points consistent with cones
-- Output: PCL cloud of cone centroids for subsequent track-edge logic
+| Level | What it does | Where |
+|:---:|---|---|
+| **1** | Load, preprocess and visualize LiDAR clouds | [`GUIAndRacingLine/`](GUIAndRacingLine/) |
+| **2** | Extract cones from the point cloud | [`get_cones_cloud.cpp`](GUIAndRacingLine/logic/get_cones_cloud.cpp), [`cones_recog.cpp`](GUIAndRacingLine/logic/cones_recog.cpp) |
+| **3** | Split cones into left/right track edges | [`distinguish_left_right.cpp`](GUIAndRacingLine/logic/distinguish_left_right.cpp) |
+| **4** | Optimize a minimum-curvature racing line | [`racingline_nlopt.cpp`](GUIAndRacingLine/logic/racingline_nlopt.cpp) |
+| **5** | LiDAR odometry from pairwise ICP | [`OdometryWithProcessing/main.cpp`](OdometryWithProcessing/main.cpp) |
+| **🎁** | Interactive Qt viewer with tunable sliders | [`pclviewer.cpp`](GUIAndRacingLine/pclviewer.cpp) |
 
-2) Left/Right cone discrimination (Level 3)
-- Greedy growth on both sides using local track direction (heading from the last two cones)
-- Dynamic side assignment on curves: a cone is “left” if the cross product with the current heading is > 0, otherwise “right”
-- Angle gating: the incremental turning angle must stay within bounds to avoid zig‑zags
+> This repo covers the LiDAR path only; the camera path is not implemented.
 
-3) Racing line optimization (Level 4)
-- Decision variables: lateral offsets along local normals of the midpoints between left and right edges
-- Objective: minimize squared curvature + small smoothness term, subject to staying inside the corridor (bound constraints)
-- Solver: derivative‑free NLOPT (LN_BOBYQA) — robust and simple to deploy
+## 🧭 Pipeline
 
-4) LiDAR odometry (Level 5)
-- Pairwise registration of successive point clouds (ICP)
-- Produces an estimated displacement/trajectory; plotting provided for quick inspection
+```mermaid
+flowchart LR
+    A[(cones.pcd)] --> B[PassThrough<br/>+ SOR]
+    B --> C[Wall removal<br/>+ Euclidean clusters]
+    C --> D{ICP vs<br/>ideal_cone.ply}
+    D -- cone --> E[Left / Right<br/>split]
+    E --> F([NLopt racing line])
+    D -- not a cone --> G([Obstacle cloud])
 
-
-## Build and run
-
-### GUIAndRacingLine
-
-This process has been tested for MacOS 15, M3 processor. 
-
+    P[(first.pcd<br/>second.pcd)] --> Q[PassThrough<br/>+ SOR] --> R([ICP odometry])
 ```
+
+## 🔬 How it works
+
+**Cone extraction (L2).** A PassThrough filter crops the cloud by height, then Statistical Outlier Removal drops stray points. Region growing removes walls, and Euclidean clustering finds small blobs. Each blob is ICP-matched against an ideal cone model (`ideal_cone.ply`); good fits become cone centroids.
+
+**Left/right split (L3).** Greedy growth on both sides follows the local heading, taken from the last two cones. A cone is *left* if its cross product with the heading is positive, otherwise *right*. An angle gate rejects zig-zags.
+
+**Racing line (L4).** Decision variables are lateral offsets along the normals of the left/right midpoints. The objective is squared curvature plus a small smoothness term, with bounds that keep the line inside the corridor. Solved with derivative-free `LN_BOBYQA`.
+
+**Odometry (L5).** Two consecutive scans are filtered the same way and registered with ICP. The resulting transform gives the displacement between frames.
+
+## 🚀 Build & run
+
+> Tested on macOS 15 (Apple M3). Requires PCL, VTK, Qt 5/6 and NLopt.
+
+<details open>
+<summary><b>GUIAndRacingLine</b>: interactive viewer + full pipeline</summary>
+
+```bash
 cd GUIAndRacingLine
-cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug  
-cd cmake-build-debug  
-cmake --build .
-./pcl_viewer
+cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug
+cmake --build cmake-build-debug
+./cmake-build-debug/pcl_visualizer
 ```
 
-### OdometryWithProcessing
+Pick `external_files/cones.pcd` and `external_files/ideal_cone.ply`, hit **Load**, then **Compute**. Use the *SOR*, *ConeRec* and *Line* tabs to tune parameters live.
+</details>
 
-This process has been tested for MacOS 15, M3 processor. 
+<details>
+<summary><b>OdometryWithProcessing</b>: pairwise ICP</summary>
 
-```
+```bash
 cd OdometryWithProcessing
-cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug  
-cd cmake-build-debug  
-cmake --build .
-./sample_consensus first.pcd second.pcd
+cmake -DCMAKE_BUILD_TYPE=Debug -G Ninja -S . -B cmake-build-debug
+cmake --build cmake-build-debug
+./cmake-build-debug/sample_consensus "external files/first.pcd" "external files/second.pcd"
+```
+</details>
+
+## 📁 Repository map
+
+```
+GUIAndRacingLine/          Qt + PCL viewer and the full cone → racing-line pipeline
+  logic/                   cone extraction, ICP cone matching, left/right, NLopt
+  external_files/          sample cloud (cones.pcd) + cone template (ideal_cone.ply)
+OdometryWithProcessing/    Level 5 ICP odometry on two scans
+GenConeTool/               Python script that generates synthetic cone models
+Report/                    project report + original task brief
+docs/                      figures and technical write-up
+other/                     R&D sandboxes (PCL experiments, earlier branches)
 ```
 
+📊 Numbers and effort breakdown: [`STATS.md`](STATS.md)
 
-## Repository guide (selected files)
-- `branch_deliverable/GUIAndRacingLine/logic/get_cones_cloud.cpp` — cone segmentation
-- `branch_deliverable/GUIAndRacingLine/logic/distinguish_left_right.cpp` — left/right split
-- `branch_deliverable/GUIAndRacingLine/logic/racingline_nlopt.cpp` — racing line
-- `branch_odometry/odometry_with_processing/main.cpp` — LiDAR odometry
-- `pathplanning/racingline_nlopt_cpp/racingline_nlopt.cpp` — compact NLOPT example
+## 🛣️ Future work
 
-## Results at a glance
-- Clean separation of left/right edges on curved tracks (dynamic side logic)
-- Smooth, corridor‑constrained racing line with low curvature
-- Consistent odometry over short sequences with ICP registration
-
-## Notes & future work
-- Add dataset loaders and scripted benchmarks for reproducibility
-- Extend odometry with robust outlier rejection and loop closure
-- Export artifacts (edges, racing line) as PCD/CSV for downstream modules
+- Dataset loaders and scripted benchmarks for reproducibility
+- Robust outlier rejection and loop closure for odometry
+- Export edges and racing line as PCD/CSV for downstream modules
